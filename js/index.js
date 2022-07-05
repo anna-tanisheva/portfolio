@@ -13,6 +13,24 @@ const contactsTitle = document.querySelector('.contacts h2');
 const headerSkills = document.querySelector('.skills');
 const headerPortfolio = document.querySelector('.portfolio');
 
+const videoPlayer = document.querySelector('.video-player');
+const overlayPlayer = videoPlayer.querySelector('.overlay-player');
+const playButton = videoPlayer.querySelector('.play-button');
+const video = videoPlayer.querySelector('.main-video');
+const playToggler = videoPlayer.querySelector('.play-toggle');
+const volumeToggler = videoPlayer.querySelector('.volume-toggle');
+const timeLine = videoPlayer.querySelector('.timeline');
+const volumeControl = videoPlayer.querySelector('.volume-lvl');
+
+let isPlayed = false;
+let isMuted = false;
+
+let dragTimeline;
+let grabTimeline;
+
+let dragVolume;
+let grabVolume;
+
 const storage = window.localStorage;
 
 window.addEventListener('load', () => {
@@ -155,4 +173,225 @@ buttons.forEach((node) => {
 	node.addEventListener('click', clickEffect)
 })
 
-console.log('Смена изображений в секции portfolio +25\n-при кликах по кнопкам Winter, Spring, Summer, Autumn в секции portfolio отображаются изображения из папки с соответствующим названием +20\n-кнопка, по которой кликнули, становится активной т.е. выделяется стилем. Другие кнопки при этом будут неактивными +5\n 2.Перевод страницы на два языка +25\n-при клике по надписи ru англоязычная страница переводится на русский язык +10\n-при клике по надписи en русскоязычная страница переводится на английский язык +10\n-надписи en или ru, соответствующие текущему языку страницы, становятся активными т.е. выделяются стилем +5\n3.Переключение светлой и тёмной темы +25\n-На страницу добавлен переключатель при клике по которому:\n-тёмная тема приложения сменяется светлой +10\n-светлая тема приложения сменяется тёмной +10\n-после смены светлой и тёмной темы интерактивные элементы по-прежнему изменяют внешний вид при наведении и клике и при этом остаются видимыми на странице (нет ситуации с белым шрифтом на белом фоне) +5\n4.Дополнительный функционал: выбранный пользователем язык отображения страницы и светлая или тёмная тема сохраняются при перезагрузке страницы +5\n5.Дополнительный функционал: сложные эффекты для кнопок при наведении и / или клике + 5')
+//player logic
+
+const hideOverlayPlayer = function () {
+	overlayPlayer.classList.add('overlay-player-hidden');
+	setTimeout(overlayPlayer.classList.add("hidden-overlay"), 300);
+}
+const toggleButton = function () {
+	playButton.classList.toggle('hidden-overlay');
+}
+const changeBgPlay = function () {
+	playToggler.classList.toggle('paused');
+	playToggler.classList.toggle('played');
+}
+const changeBgMute = function () {
+	volumeToggler.classList.toggle('muted');
+	volumeToggler.classList.toggle('unmuted');
+}
+////////////////////////////////////////////////////////////////////
+const calcCoordinate = function (e) {
+	let width = window.getComputedStyle(e.target).getPropertyValue('width');
+	let offset = e.offsetX;
+	let clickXPercent = offset * 100 / +(width.split('p')[0]);
+	return clickXPercent;
+}
+const calcCoordinateTouch = function (e) {
+	if (e.target.nodeName === 'INPUT') {
+		let coordinate = e.changedTouches[0].clientX;
+		let coordinatePercent = (coordinate - e.target.getBoundingClientRect().left) * 100 / window.getComputedStyle(e.target).getPropertyValue('width').split('p')[0];
+		return coordinatePercent;
+	}
+
+}
+
+// Timeline Logic
+const changeTimeLineBg = function () {
+	timeLine.style.background = `linear-gradient(
+		to right,
+		rgb(189, 174, 130) 0%,
+		rgb(189, 174, 130) ${timeLine.value / 1.77}%,
+		rgb(200, 200, 200) ${timeLine.value / 1.77}%,
+		rgb(200, 200, 200) 100%
+	 )`
+}
+const changeTimeLine = function () {
+	timeLine.value = video.currentTime * 3;
+	changeTimeLineBg();
+}
+
+//Video toggle
+const toggleVideo = function () {
+	window.setInterval(changeTimeLine, 200);
+	if (isPlayed) {
+		toggleButton();
+		changeBgPlay();
+		video.pause();
+		isPlayed = false;
+	} else {
+		toggleButton();
+		changeBgPlay();
+		video.play();
+		isPlayed = true;
+	}
+}
+timeLine.addEventListener('mouseover', function () { dragTimeline = true });
+timeLine.addEventListener('mouseout', function () { dragTimeline = false; grabTimeline = false });
+timeLine.addEventListener('mousedown', function () { grabTimeline = dragTimeline });
+timeLine.addEventListener('mouseup', function () { grabTimeline = false });
+timeLine.addEventListener('mousemove', function (e) {
+	if (dragTimeline && grabTimeline) {
+		if (!isPlayed) {
+			video.currentTime = timeLine.value / 3;
+		} else {
+			video.pause();
+			video.currentTime = timeLine.value / 3;
+			video.play();
+		}
+	}
+});
+timeLine.addEventListener('mousedown', (e) => {
+	let timelineOffset = calcCoordinate(e);
+	let currentTimeSec = video.duration * timelineOffset / 100;
+	video.currentTime = currentTimeSec;
+});
+
+//Touch event logic timeline
+timeLine.addEventListener('touchstart', function () { dragTimeline = true; grabTimeline = dragTimeline });
+timeLine.addEventListener('touchend', function () { grabTimeline = false });
+timeLine.addEventListener('touchmove', function (e) {
+	if (dragTimeline && grabTimeline) {
+		if (!isPlayed) {
+			video.currentTime = timeLine.value / 3;
+		} else {
+			video.pause();
+			video.currentTime = timeLine.value / 3;
+			video.play();
+		}
+	}
+});
+timeLine.addEventListener('touchstart', (e) => {
+	if (!isPlayed) {
+		let timelineOffset = calcCoordinateTouch(e);
+		let currentTimeSec = video.duration * timelineOffset / 100;
+		video.currentTime = currentTimeSec
+	} else {
+		video.pause();
+		let timelineOffset = calcCoordinateTouch(e);
+		let currentTimeSec = video.duration * timelineOffset / 100;
+		video.currentTime = currentTimeSec
+		video.play();
+	}
+});
+
+
+// Volume Logic
+const changeVolumeBG = function (e) {
+	if (e.type.indexOf('touch') !== -1) {
+		let bgOffset = calcCoordinateTouch(e);
+		volumeControl.style.background = `linear-gradient(
+			to right,
+			rgb(189, 174, 130) 0%,
+			rgb(189, 174, 130) ${bgOffset + 0.1}%,
+			rgb(200, 200, 200) ${bgOffset + 0.1}%,
+			rgb(200, 200, 200) 100%
+		 )`
+	} else {
+		let bgOffset = calcCoordinate(e);
+		volumeControl.style.background = `linear-gradient(
+			to right,
+			rgb(189, 174, 130) 0%,
+			rgb(189, 174, 130) ${bgOffset + 0.1}%,
+			rgb(200, 200, 200) ${bgOffset + 0.1}%,
+			rgb(200, 200, 200) 100%
+		 )`
+	}
+}
+const changeVolumeLvl = function (e) {
+	if (e.type.indexOf('touch') !== -1) {
+		let volumeLvl = calcCoordinateTouch(e) / 100;
+		if (isMuted) {
+			toggleMuteSound();
+		}
+		if (volumeLvl < 0.03) {
+			volumeLvl = 0;
+			toggleMuteSound();
+			video.volume = volumeLvl;
+			volumeControl.value = 0;
+		} else if (volumeLvl > 0.99) {
+			volumeLvl = 1;
+			video.volume = volumeLvl;
+		} else {
+			video.volume = volumeLvl;
+		}
+	} else {
+		let volumeLvl = calcCoordinate(e) / 100;
+		if (isMuted) {
+			toggleMuteSound();
+		}
+		if (volumeLvl < 0.03) {
+			volumeLvl = 0;
+			toggleMuteSound();
+			video.volume = volumeLvl;
+			volumeControl.value = 0;
+		} else if (volumeLvl > 0.99) {
+			volumeLvl = 1;
+			video.volume = volumeLvl;
+		} else {
+			video.volume = volumeLvl;
+		}
+	}
+}
+//Volume toggle
+const toggleMuteSound = function () {
+	if (isMuted) {
+		changeBgMute();
+		if (!video.volume) {
+			video.volume = 0.1;
+			volumeControl.value = 1;
+		}
+		video.muted = false;
+		isMuted = false;
+	} else {
+		changeBgMute();
+		video.muted = true;
+		isMuted = true;
+	}
+}
+
+volumeControl.addEventListener('mouseover', function () { dragVolume = true });
+volumeControl.addEventListener('mouseout', function () { dragVolume = false; grabVolume = false });
+volumeControl.addEventListener('mousedown', function () { grabVolume = dragVolume });
+volumeControl.addEventListener('mouseup', function () { grabVolume = false });
+volumeControl.addEventListener('mousemove', function (e) {
+	if (dragVolume && grabVolume) {
+		changeVolumeBG(e);
+		changeVolumeLvl(e);
+	}
+});
+volumeControl.addEventListener('mousedown', changeVolumeLvl);
+volumeControl.addEventListener('mousedown', changeVolumeBG);
+
+//Touch event logic volume
+volumeControl.addEventListener('touchstart', function () { dragTimeline = true; grabTimeline = dragTimeline });
+volumeControl.addEventListener('touchend', function () { grabTimeline = false });
+volumeControl.addEventListener('touchmove', function (e) {
+	if (dragTimeline && grabTimeline) {
+		changeVolumeBG(e);
+		changeVolumeLvl(e);
+	}
+});
+volumeControl.addEventListener('touchstart', (e) => {
+	changeVolumeLvl(e);
+	changeVolumeBG(e);
+});
+
+
+playButton.addEventListener('click', hideOverlayPlayer, { once: true });
+playButton.addEventListener('click', toggleVideo);
+overlayPlayer.addEventListener('click', toggleVideo, { once: true });
+overlayPlayer.addEventListener('click', hideOverlayPlayer, { once: true });
+video.addEventListener('click', toggleVideo);
+playToggler.addEventListener('click', toggleVideo);
+volumeToggler.addEventListener('click', toggleMuteSound);

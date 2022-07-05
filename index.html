@@ -114,7 +114,15 @@
 			<section id="video" class="section video">
 				<h2 class="section-title" data-i18="video">Video</h2>
 				<div class="video-player">
-					<button class="control"></button>
+					<div class="overlay-player"></div>
+					<video src="assets/video/video.mp4" class="main-video"></video>
+					<button class="play-button"></button>
+					<div class="control-bar">
+						<div class="play-toggle paused"></div>
+						<input type="range" class="timeline" value="0" max="177">
+						<div class="volume-toggle unmuted"></div>
+						<input type="range" class="volume-lvl" step="1" min="0" max="100" value="100">
+					</div>
 				</div>
 			</section>
 			<section id="price" class="section price">
